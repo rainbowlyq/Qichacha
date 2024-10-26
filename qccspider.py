@@ -15,7 +15,7 @@ from urllib import parse
 
 # 参数
 run_time = 300  # 运行次数
-sleep_time = 1.0  # 延迟时间
+sleep_time = 0.5  # 延迟时间
 xlsfilepath = 'hs300.xls'  # 读入文件
 savepath = 'output.xls'  # 输出文件
 
@@ -35,34 +35,35 @@ def get_data(runtime, sleeptime):
         tgturl = 'https://www.qcc.com/web/search/trademark?key=' + parse.quote(company) + '&type=zhuanli'  # 获取目标网址
         driver.get(tgturl)
         time.sleep(sleeptime)
-        if driver.find_elements(By.CLASS_NAME, 'pills-item'):
-            driver.find_elements(By.CLASS_NAME, 'pills-item')[5].click()  # 点击筛选申请人
-            time.sleep(sleeptime*0.5)
-            patenttypes = driver.find_elements(By.CLASS_NAME, 'pills-item')[1:]  # 获取所有专利信息
-            patentinfo = {'公司名称': company}  # 单个企业的专利信息
-            year = ['']  # 用于判断是否进入“公开年份”
-            publicflag = False
-            for pt in patenttypes:
-                txt = pt.text
-                if len(txt) > 0:  # 跳过空项
-                    left = txt.find('(')
-                    right = txt.find(')')
-                    name = txt[:left-1]
-                    if publicflag:
-                        name = 'public' + name
-                    elif year[-1] < name < '3000':
-                        publicflag = True
-                        year.clear()
-                        name = 'public' + name
-                    else:
-                        year.append(name)
-                    num = int(txt[left+1:right])  # 从括号中取数字
-                    patentinfo[name] = num  # 以字典形式储存
+        while not(driver.find_elements(By.CLASS_NAME, 'pills-item')):
+            time.sleep(sleeptime)
+        driver.find_elements(By.CLASS_NAME, 'pills-item')[5].click()  # 点击筛选申请人
+        time.sleep(sleeptime*0.5)
+        while not(driver.find_elements(By.CLASS_NAME, 'pills-item')):
+            time.sleep(sleeptime)
+        patenttypes = driver.find_elements(By.CLASS_NAME, 'pills-item')[1:]  # 获取所有专利信息
+        patentinfo = {'公司名称': company}  # 单个企业的专利信息
+        year = ['']  # 用于判断是否进入“公开年份”
+        publicflag = False
+        for pt in patenttypes:
+            txt = pt.text
+            if len(txt) > 0:  # 跳过空项
+                left = txt.find('(')
+                right = txt.find(')')
+                name = txt[:left-1]
+                if publicflag:
+                    name = 'public' + name
+                elif year[-1] < name < '3000':
+                    publicflag = True
+                    year.clear()
+                    name = 'public' + name
                 else:
-                    pass
-            data.append(patentinfo)  # 将字典加入总列表
-        else:
-            print(company + ' fail')
+                    year.append(name)
+                num = int(txt[left+1:right])  # 从括号中取数字
+                patentinfo[name] = num  # 以字典形式储存
+            else:
+                pass
+        data.append(patentinfo)  # 将字典加入总列表
         print("process status: %d/%d" % (i + 1, runtime))  # 进度监视
 
     return data
